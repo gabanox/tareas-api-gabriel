@@ -1,66 +1,44 @@
 # CLAUDE.md
 
-Este archivo proporciona contexto a Claude Code (claude.ai/code) para trabajar con el código de este repositorio.
+Gestor de tareas pendientes en Java 17 para mentoría técnica de Generation México (CH70 Java). Arquitectura en capas sin frameworks.
 
-## Descripción del Proyecto
+## Stack
 
-Gestor de tareas pendientes desarrollado en Java 17. Proyecto de práctica para la mentoría técnica de Generation México (CH70 Java). Implementa un sistema de gestión de tareas con arquitectura en capas sin dependencias externas de frameworks.
+- Java 17
+- Maven 3.8+
+- JUnit 5.10.2
+- Sin dependencias de frameworks (Java vanilla)
 
-## Comandos Principales
+## Comandos
 
 ```bash
-# Compilar el proyecto
-mvn compile
-
-# Ejecutar tests
-mvn test
-
-# Ejecutar un test específico
-mvn test -Dtest=TareaServicioTest
-mvn test -Dtest=TareaRepositorioTest#guardarYBuscar
-
-# Ejecutar la aplicación demo
-mvn -q exec:java
-
-# Limpiar y recompilar
-mvn clean compile
+mvn compile              # Compilar
+mvn test                 # Ejecutar tests
+mvn -q exec:java         # Correr demo
+mvn clean compile        # Limpiar y recompilar
 ```
 
 ## Arquitectura
 
-Arquitectura en capas sin frameworks (Java vanilla):
-
 ```
-App (demo) → TareaServicio (lógica de negocio) → TareaRepositorio (persistencia en memoria) → Tarea (modelo)
+App → TareaServicio → TareaRepositorio → Tarea
 ```
 
-### Componentes:
+## Convenciones
 
-- **Modelo**: `Tarea` (entidad principal), `Prioridad` (enum: BAJA/MEDIA/ALTA), `TareaNoEncontradaException` (excepción de dominio)
-- **Repositorio**: Implementación en memoria usando `LinkedHashMap`, asigna IDs autoincrementales iniciando en 1
-- **Servicio**: Capa de lógica de negocio con casos de uso (crear, completar, listar, generar reportes). Recibe el repositorio mediante inyección por constructor
+- Todo el código y las pruebas están en español (nombres de clases, métodos, variables, comentarios)
+- JUnit 5: una prueba por comportamiento, nombres descriptivos en español
+- No agregues dependencias nuevas sin preguntarme primero
+- **Regla obligatoria**: cualquier cambio debe dejar `mvn test` en verde antes del commit
 
-**Nota de diseño**: El método `Tarea.setId()` tiene visibilidad package-private para que únicamente `TareaRepositorio` pueda asignar identificadores, preservando el control del autoincremento.
+## Bugs conocidos (no corregir sin consultar)
 
-## Defectos Conocidos
+1. `TareaRepositorio.buscarPorTitulo()` línea 44: usa `.contains()` sin normalizar mayúsculas (test deshabilitado)
+2. `TareaServicio.listarPorPrioridadMinima()` línea 51: usa `>` en lugar de `>=`, excluye la prioridad pedida
+3. `TareaServicio.diasRestantes()` línea 67: parámetros invertidos en `between()`, retorna valores negativos
 
-### Bugs confirmados con evidencia en tests:
+## Notas técnicas
 
-1. **`TareaRepositorio.buscarPorTitulo()`** (línea 44): Utiliza `.contains()` sin normalización a minúsculas. No realiza búsqueda case-insensitive como especifica el Javadoc. Test correspondiente deshabilitado con `@Disabled` en `TareaRepositorioTest:33-39`.
-
-2. **`TareaServicio.listarPorPrioridadMinima()`** (línea 51): Operador de comparación incorrecto (`>` en lugar de `>=`). Excluye erróneamente tareas con la prioridad mínima solicitada.
-
-3. **`TareaServicio.diasRestantes()`** (línea 67): Orden incorrecto de parámetros en `ChronoUnit.DAYS.between()`. Retorna valores negativos cuando deberían ser positivos. El test en `TareaServicioTest:64` espera `-3` pero la semántica correcta sería `3`.
-
-4. **`Tarea` constructor** (línea 19): Ausencia de validación para `titulo` vacío o blank. Actualmente acepta cadenas vacías sin rechazarlas.
-
-### Cobertura de tests incompleta (TODOs documentados):
-
-- `TareaServicioTest:39` - Verificar que `completar(999)` lance `TareaNoEncontradaException`
-- `TareaServicioTest:102` - Tests del método `eliminar(int)` no implementados
-- `TareaRepositorio.todas()` sin cobertura de tests
-
-## Configuración Maven
-
-- **maven-compiler-plugin versión 3.13.0**: Versión explícita requerida. Las versiones antiguas (3.1 incluida en distribuciones Ubuntu/Debian) ignoran `maven.compiler.release` y compilan con Java 5, causando errores "Source option 5 is no longer supported".
-- **exec-maven-plugin**: Configurado con `mainClass=mx.generation.tareas.App` para ejecutar la demo directamente con `mvn exec:java`.
+- `maven-compiler-plugin` 3.13.0 requerido: versiones antiguas ignoran `release=17` y compilan como Java 5
+- `Tarea.setId()` es package-private para que solo `TareaRepositorio` asigne IDs
+- IDs autoincrementales inician en 1, persistencia en memoria con `LinkedHashMap`
